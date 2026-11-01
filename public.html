@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="WaterGrid Citizen Water Request Portal - Submit locality water requests and track administrative approval in real-time">
+    <title>Citizen Water Request Portal | WaterGrid</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .citizen-shell {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 24px 20px 48px;
+        }
+        .citizen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+        .citizen-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--navy);
+        }
+        .citizen-brand-mark {
+            display: grid;
+            width: 40px;
+            height: 40px;
+            place-items: center;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #2585d7, #126bb8);
+            color: white;
+            font-size: 20px;
+            font-weight: 800;
+        }
+        .citizen-brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+        .citizen-brand-title {
+            font-size: 19px;
+            font-weight: 800;
+            color: var(--navy);
+            letter-spacing: -0.5px;
+        }
+        .citizen-brand-sub {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        .citizen-user-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .citizen-pill {
+            background: rgba(37, 133, 215, 0.1);
+            color: #126bb8;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .citizen-hero {
+            background: linear-gradient(135deg, #112438 0%, #1d3b58 100%);
+            border-radius: 16px;
+            padding: 28px 32px;
+            color: #ffffff;
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(17, 36, 56, 0.15);
+        }
+        .citizen-hero h1 {
+            margin: 0 0 8px;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .citizen-hero p {
+            margin: 0;
+            color: #b0c7dc;
+            font-size: 13.5px;
+            max-width: 650px;
+            line-height: 1.5;
+        }
+        .citizen-stats {
+            display: flex;
+            gap: 16px;
+        }
+        .citizen-stat-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 12px 18px;
+            min-width: 130px;
+            text-align: center;
+        }
+        .citizen-stat-value {
+            font-size: 22px;
+            font-weight: 800;
+            color: #38bdf8;
+        }
+        .citizen-stat-label {
+            font-size: 11px;
+            color: #cbd5e1;
+            margin-top: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .citizen-grid {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+        @media (max-width: 960px) {
+            .citizen-grid {
+                grid-template-columns: 1fr;
+            }
+            .citizen-hero {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+        .citizen-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .card-header h2 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .chip-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+            margin-bottom: 14px;
+        }
+        .volume-chip {
+            background: #f1f5f9;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .volume-chip:hover {
+            background: var(--blue-pale);
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+        .req-track-item {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 14px;
+            transition: all 0.2s ease;
+        }
+        .req-track-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-color: #cbd5e1;
+        }
+        .req-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .req-id-badge {
+            background: #e2e8f0;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
+        .status-approved {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+        .status-allocated {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+        }
+        .decision-note-box {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .decision-note-approved {
+            background: #f0fdf4;
+            color: #15803d;
+            border-left: 3px solid #22c55e;
+        }
+        .decision-note-rejected {
+            background: #fef2f2;
+            color: #b91c1c;
+            border-left: 3px solid #ef4444;
+        }
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: currentColor;
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; }
+        }
+    </style>
+</head>
+<body style="background: #f1f5f9;">
+    <div class="citizen-shell">
+        <header class="citizen-header">
+            <a class="citizen-brand" href="public.html">
+                <div class="citizen-brand-mark">W</div>
+                <div class="citizen-brand-text">
+                    <span class="citizen-brand-title">WaterGrid</span>
+                    <span class="citizen-brand-sub">Public Citizen Portal</span>
+                </div>
+            </a>
+            <div class="citizen-user-box">
+                <span class="citizen-pill">
+                    <span>👤</span>
+                    <strong id="citizenName">Resident User</strong>
+                </span>
+                <span id="adminSwitchContainer" style="display: none;">
+                    <a href="index.html" class="button button-secondary" style="font-size: 12px; padding: 6px 12px;">Admin Console ➔</a>
+                </span>
+                <button type="button" id="citizenSignOutBtn" class="button button-secondary" style="font-size: 12px; padding: 6px 12px;">
+                    Sign out
+                </button>
+            </div>
+        </header>
+
+        <div id="noticeContainer" style="display: none; margin-bottom: 20px;"></div>
+
+        <!-- HERO BANNER -->
+        <section class="citizen-hero">
+            <div>
+                <div style="font-size: 11px; font-weight: 700; color: #38bdf8; letter-spacing: 1px; margin-bottom: 6px;">COMMUNITY WATER DISTRIBUTION</div>
+                <h1>Locality Water Supply Request Hub</h1>
+                <p>Submit emergency or scheduled water supply requests for your neighborhood. Grid administrators review every request directly and dispatch water via priority routing.</p>
+            </div>
+            <div class="citizen-stats">
+                <div class="citizen-stat-card">
+                    <div class="citizen-stat-value" id="statMyRequests">0</div>
+                    <div class="citizen-stat-label">My Requests</div>
+                </div>
+                <div class="citizen-stat-card">
+                    <div class="citizen-stat-value" id="statApproved">0</div>
+                    <div class="citizen-stat-label">Approved</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MAIN TWO-COLUMN WORKSPACE -->
+        <main class="citizen-grid">
+            <!-- REQUEST SUBMISSION FORM -->
+            <section class="citizen-card">
+                <div class="card-header">
+                    <h2>Submit Water Request</h2>
+                    <span style="font-size: 11px; color: var(--muted); font-weight: 600;">STEP 1 OF 2</span>
+                </div>
+
+                <form id="publicRequestForm" class="request-form">
+                    <label for="citizenArea">Target Neighborhood / Demand Area</label>
+                    <select id="citizenArea" name="area_id" required>
+                        <option value="">Loading network areas...</option>
+                    </select>
+
+                    <label for="citizenLitres" style="margin-top: 14px;">Requested Water Volume (Litres)</label>
+                    <input type="number" id="citizenLitres" name="requested_litres" min="100" step="50" required placeholder="e.g. 1500">
+                    
+                    <div class="chip-group">
+                        <button type="button" class="volume-chip" onclick="setVolume(500)">500 L</button>
+                        <button type="button" class="volume-chip" onclick="setVolume(1000)">1,000 L</button>
+                        <button type="button" class="volume-chip" onclick="setVolume(1500)">1,500 L</button>
+                        <button type="button" class="volume-chip" onclick="setVolume(2500)">2,500 L</button>
+                    </div>
+
+                    <label for="citizenReason">Purpose / Category</label>
+                    <select id="citizenReason" name="reason" required>
+                        <option value="Domestic Household Supply">Domestic Household Supply</option>
+                        <option value="Emergency Pipeline Shortage">Emergency Pipeline Shortage</option>
+                        <option value="Community Tanker Request">Community Tanker Refill</option>
+                        <option value="Hospital / Healthcare Reserve">Hospital / Healthcare Reserve</option>
+                        <option value="Commercial / Institutional Facility">Commercial / Institutional Facility</option>
+                    </select>
+
+                    <label for="citizenNotes" style="margin-top: 14px;">Additional Delivery Details (Optional)</label>
+                    <input type="text" id="citizenNotes" name="notes" placeholder="e.g. Block C street supply or tanker point">
+
+                    <div style="margin-top: 24px;">
+                        <button type="submit" id="submitReqBtn" class="button button-primary" style="width: 100%; justify-content: center; padding: 12px;">
+                            🚀 Send Request to Grid Administrator
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- TRACKING LIST -->
+            <section class="citizen-card">
+                <div class="card-header">
+                    <h2>Track Your Water Requests</h2>
+                    <span style="font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 6px;">
+                        <span class="status-dot"></span> Live Sync Active
+                    </span>
+                </div>
+
+                <div id="requestsTrackerContainer">
+                    <div class="empty-state" style="padding: 40px 20px;">
+                        <span class="empty-icon">⇢</span>
+                        <strong>No requests submitted yet</strong>
+                        <span>Fill the form on the left to submit your first community water request.</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-service.js"></script>
+    <script>
+        let loggedInUser = null;
+
+        function setVolume(val) {
+            document.getElementById('citizenLitres').value = val;
+        }
+
+        function showPublicNotice(type, msg) {
+            const c = document.getElementById('noticeContainer');
+            c.innerHTML = `
+                <div class="notice notice-${type}">
+                    <span class="notice-icon">${type === 'success' ? '✓' : '⚠'}</span>
+                    <p>${msg}</p>
+                </div>
+            `;
+            c.style.display = 'block';
+            setTimeout(() => { c.style.display = 'none'; }, 6000);
+        }
+
+        async function refreshPublicPortal() {
+            try {
+                const state = await window.supabaseService.data.fetchNetworkState();
+                if (!state) return;
+
+                // Populate Demand Areas select
+                const select = document.getElementById('citizenArea');
+                if (select && select.children.length <= 1 && state.areas) {
+                    select.innerHTML = '<option value="">-- Choose your area --</option>' +
+                        state.areas.map(a => `<option value="${a.id}">${a.name} (${a.priority} Priority, Demand: ${Number(a.dailyDemand).toLocaleString()} L)</option>`).join('');
+                }
+
+                // Filter user's requests or display all public requests
+                const allReqs = state.allRequests || [];
+                const userEmail = (loggedInUser?.email || '').toLowerCase();
+                
+                // Show requests belonging to this user or all public requests if demo
+                const myReqs = allReqs.filter(r => {
+                    const reqBy = (r.requestedBy || '').toLowerCase();
+                    return reqBy.includes(userEmail) || userEmail === 'citizen@watergrid.com' || userEmail === 'admin@watergrid.com';
+                });
+
+                document.getElementById('statMyRequests').textContent = myReqs.length;
+                document.getElementById('statApproved').textContent = myReqs.filter(r => r.status === 'approved' || r.status === 'allocated').length;
+
+                const container = document.getElementById('requestsTrackerContainer');
+                if (!container) return;
+
+                if (myReqs.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state" style="padding: 40px 20px;">
+                            <span class="empty-icon">⇢</span>
+                            <strong>No requests found</strong>
+                            <span>Submit a request to see real-time administrative status.</span>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = myReqs.map(r => {
+                    let badgeClass = 'status-pending';
+                    let statusLabel = '⏳ Awaiting Admin Review';
+                    if (r.status === 'approved') {
+                        badgeClass = 'status-approved';
+                        statusLabel = '✓ Accepted by Admin (Queued)';
+                    } else if (r.status === 'rejected') {
+                        badgeClass = 'status-rejected';
+                        statusLabel = '✕ Rejected by Admin';
+                    } else if (r.status === 'allocated') {
+                        badgeClass = 'status-allocated';
+                        statusLabel = '⚡ Water Allocated & Dispatched';
+                    }
+
+                    return `
+                        <div class="req-track-item">
+                            <div class="req-top-row">
+                                <span class="req-id-badge">${r.id}</span>
+                                <span class="status-badge ${badgeClass}">
+                                    <span class="pulse-dot"></span> ${statusLabel}
+                                </span>
+                            </div>
+                            <div style="font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 4px;">
+                                ${r.areaName || r.areaId} • <span style="color: #2585d7;">${Number(r.requestedLitres).toLocaleString()} L</span>
+                            </div>
+                            <div style="font-size: 12.5px; color: var(--text); margin-bottom: 6px;">
+                                <strong>Purpose:</strong> ${r.reason || 'Domestic Supply Request'}
+                            </div>
+                            <div style="font-size: 11px; color: var(--muted); display: flex; justify-content: space-between;">
+                                <span>Requester: ${r.requestedBy || 'Public Citizen'}</span>
+                                <span>${r.createdAt || ''}</span>
+                            </div>
+                            ${r.decisionNotes ? `
+                                <div class="decision-note-box ${r.status === 'rejected' ? 'decision-note-rejected' : 'decision-note-approved'}">
+                                    <span>${r.status === 'rejected' ? '⚠ Admin Note:' : '✓ Admin Confirmation:'}</span>
+                                    <strong>${r.decisionNotes}</strong>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error('Error refreshing public portal:', err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check auth
+            loggedInUser = await window.supabaseService.auth.getCurrentUser();
+            if (!loggedInUser) {
+                window.location.href = 'public-login.html';
+                return;
+            }
+
+            document.getElementById('citizenName').textContent = loggedInUser.username || loggedInUser.email;
+            
+            // If admin is viewing, show link to back to admin console
+            if (loggedInUser.role === 'admin' || loggedInUser.email?.includes('admin')) {
+                document.getElementById('adminSwitchContainer').style.display = 'inline-block';
+            }
+
+            document.getElementById('citizenSignOutBtn').addEventListener('click', async () => {
+                await window.supabaseService.auth.signOut();
+                window.location.href = 'public-login.html';
+            });
+
+            const form = document.getElementById('publicRequestForm');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = document.getElementById('submitReqBtn');
+                btn.disabled = true;
+                btn.textContent = 'Dispatching to Grid...';
+
+                const areaId = document.getElementById('citizenArea').value;
+                const litres = document.getElementById('citizenLitres').value;
+                const reasonSelect = document.getElementById('citizenReason').value;
+                const notes = document.getElementById('citizenNotes').value.trim();
+                const fullReason = notes ? `${reasonSelect} - ${notes}` : reasonSelect;
+                const requesterTag = `${loggedInUser.username || 'Resident'} (${loggedInUser.email})`;
+
+                try {
+                    const result = await window.supabaseService.data.addWaterRequest(areaId, litres, fullReason, requesterTag);
+                    if (result.success) {
+                        showPublicNotice('success', result.message || 'Request successfully sent! City administrators will review it shortly.');
+                        document.getElementById('citizenLitres').value = '';
+                        document.getElementById('citizenNotes').value = '';
+                        await refreshPublicPortal();
+                    } else {
+                        showPublicNotice('error', result.error || 'Failed to submit request.');
+                    }
+                } catch (err) {
+                    showPublicNotice('error', 'Network error sending request.');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = '🚀 Send Request to Grid Administrator';
+                }
+            });
+
+            await refreshPublicPortal();
+            // Real-time polling every 4 seconds to catch accept/reject from admin
+            setInterval(refreshPublicPortal, 4000);
+        });
+    </script>
+</body>
+</html>

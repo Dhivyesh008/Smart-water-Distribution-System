@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="WaterGrid Citizen & Public Portal - Request water supply for residential and community zones">
+    <title>Citizen Access | WaterGrid Public Portal</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .public-auth-card {
+            max-width: 460px;
+        }
+        .portal-switch-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(37, 133, 215, 0.12);
+            color: #2585d7;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+        .quick-demo-box {
+            margin-top: 18px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            text-align: center;
+            font-size: 12px;
+            color: var(--text);
+        }
+        .quick-demo-btn {
+            margin-top: 8px;
+            background: #eff6fb;
+            color: #2585d7;
+            border: 1px solid rgba(37, 133, 215, 0.3);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 11.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .quick-demo-btn:hover {
+            background: #2585d7;
+            color: #ffffff;
+        }
+        .auth-tab-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+        .auth-tab-btn {
+            background: none;
+            border: none;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .auth-tab-btn.active {
+            color: var(--blue);
+            background: var(--blue-pale);
+        }
+    </style>
+</head>
+<body class="auth-page">
+    <main class="auth-card public-auth-card">
+        <a class="brand auth-brand" href="public-login.html" aria-label="WaterGrid">
+            <span class="brand-mark" aria-hidden="true">W</span>
+            <span class="brand-name">water<span>grid</span></span>
+        </a>
+
+        <div class="portal-switch-badge">
+            <span>🏘</span> CITIZEN & PUBLIC ACCESS
+        </div>
+        <h1 id="pageHeading">Resident Sign In</h1>
+        <p class="auth-intro" id="pageIntro">Access the public water request portal to submit supply requests for your neighborhood and track approval status.</p>
+
+        <div class="auth-tab-row">
+            <button type="button" class="auth-tab-btn active" id="tabSignIn">Sign in</button>
+            <button type="button" class="auth-tab-btn" id="tabRegister">New Citizen Account</button>
+        </div>
+
+        <div id="authFlash" class="auth-message auth-message-success" style="display: none;"></div>
+        <div id="authError" class="auth-message auth-message-error" style="display: none;"></div>
+
+        <!-- SIGN IN FORM -->
+        <form id="publicLoginForm" class="auth-form">
+            <label for="email">Email address</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                autocomplete="username"
+                required
+                placeholder="citizen@watergrid.com"
+                value="citizen@watergrid.com"
+            >
+
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                autocomplete="current-password"
+                required
+                placeholder="Enter your password"
+                value="Citizen@123"
+            >
+
+            <button type="submit" id="submitBtn" class="button button-primary auth-submit">
+                Enter Public Portal ➔
+            </button>
+        </form>
+
+        <!-- REGISTER FORM (Initially hidden) -->
+        <form id="publicRegisterForm" class="auth-form" style="display: none;">
+            <label for="regUsername">Full Name</label>
+            <input
+                type="text"
+                id="regUsername"
+                name="username"
+                required
+                placeholder="e.g. Rahul Sharma"
+            >
+
+            <label for="regEmail">Email address</label>
+            <input
+                type="email"
+                id="regEmail"
+                name="email"
+                required
+                placeholder="name@example.com"
+            >
+
+            <label for="regPassword">Password</label>
+            <input
+                type="password"
+                id="regPassword"
+                name="password"
+                required
+                minlength="8"
+                placeholder="At least 8 characters (Upper, lower & number)"
+            >
+
+            <button type="submit" id="regSubmitBtn" class="button button-primary auth-submit">
+                Create Citizen Account ➔
+            </button>
+        </form>
+
+        <div class="quick-demo-box">
+            <div>Pre-configured citizen account: <strong>citizen@watergrid.com</strong></div>
+            <button type="button" class="quick-demo-btn" id="quickFillBtn">⚡ Fill Demo Credentials</button>
+        </div>
+
+        <p class="auth-switch" style="margin-top: 18px; text-align: center;">
+            Are you a system engineer or grid operator?<br>
+            <a href="login.html" style="font-weight: 600; color: #2585d7;">Switch to Operations Control Sign In ➔</a>
+        </p>
+    </main>
+
+    <!-- Supabase SDK & WaterGrid Engines -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-service.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check if user is already signed in
+            const currentUser = await window.supabaseService.auth.getCurrentUser();
+            if (currentUser) {
+                if (currentUser.role === 'public') {
+                    window.location.href = 'public.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
+                return;
+            }
+
+            const tabSignIn = document.getElementById('tabSignIn');
+            const tabRegister = document.getElementById('tabRegister');
+            const loginForm = document.getElementById('publicLoginForm');
+            const registerForm = document.getElementById('publicRegisterForm');
+            const pageHeading = document.getElementById('pageHeading');
+            const pageIntro = document.getElementById('pageIntro');
+            const authError = document.getElementById('authError');
+            const authFlash = document.getElementById('authFlash');
+            const quickFillBtn = document.getElementById('quickFillBtn');
+
+            tabSignIn.addEventListener('click', () => {
+                tabSignIn.classList.add('active');
+                tabRegister.classList.remove('active');
+                loginForm.style.display = 'flex';
+                registerForm.style.display = 'none';
+                pageHeading.textContent = 'Resident Sign In';
+                pageIntro.textContent = 'Access the public water request portal to submit supply requests for your neighborhood.';
+                authError.style.display = 'none';
+            });
+
+            tabRegister.addEventListener('click', () => {
+                tabRegister.classList.add('active');
+                tabSignIn.classList.remove('active');
+                registerForm.style.display = 'flex';
+                loginForm.style.display = 'none';
+                pageHeading.textContent = 'Create Citizen Account';
+                pageIntro.textContent = 'Register to request water supplies and receive live notifications upon administrative approval.';
+                authError.style.display = 'none';
+            });
+
+            quickFillBtn.addEventListener('click', () => {
+                document.getElementById('email').value = 'citizen@watergrid.com';
+                document.getElementById('password').value = 'Citizen@123';
+                tabSignIn.click();
+            });
+
+            // Handle Sign In
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                authError.style.display = 'none';
+                authFlash.style.display = 'none';
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Signing in...';
+
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value;
+
+                try {
+                    const result = await window.supabaseService.auth.signIn(email, password);
+                    if (result.success) {
+                        window.location.href = 'public.html';
+                    } else {
+                        authError.textContent = result.error || 'Invalid credentials.';
+                        authError.style.display = 'block';
+                    }
+                } catch (err) {
+                    authError.textContent = 'Error: ' + (err.message || 'Check network connection.');
+                    authError.style.display = 'block';
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Enter Public Portal ➔';
+                }
+            });
+
+            // Handle Registration
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                authError.style.display = 'none';
+                authFlash.style.display = 'none';
+                const regSubmitBtn = document.getElementById('regSubmitBtn');
+                regSubmitBtn.disabled = true;
+                regSubmitBtn.textContent = 'Creating account...';
+
+                const username = document.getElementById('regUsername').value.trim();
+                const email = document.getElementById('regEmail').value.trim();
+                const password = document.getElementById('regPassword').value;
+
+                try {
+                    const result = await window.supabaseService.auth.signUp(email, password, username, 'public');
+                    if (result.success) {
+                        authFlash.textContent = 'Citizen account created! Signing you in...';
+                        authFlash.style.display = 'block';
+                        // Auto sign in
+                        const loginRes = await window.supabaseService.auth.signIn(email, password);
+                        if (loginRes.success) {
+                            setTimeout(() => {
+                                window.location.href = 'public.html';
+                            }, 800);
+                        } else {
+                            tabSignIn.click();
+                        }
+                    } else {
+                        authError.textContent = result.error || 'Could not complete registration.';
+                        authError.style.display = 'block';
+                    }
+                } catch (err) {
+                    authError.textContent = 'Registration error: ' + (err.message || 'Please retry.');
+                    authError.style.display = 'block';
+                } finally {
+                    regSubmitBtn.disabled = false;
+                    regSubmitBtn.textContent = 'Create Citizen Account ➔';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

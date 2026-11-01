@@ -1,0 +1,19 @@
+# Compiled class files
+out/
+bin/
+*.class
+
+# IDE and Editor files
+.idea/
+src/.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+tmp/
+temp/

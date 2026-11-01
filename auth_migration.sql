@@ -1,0 +1,8 @@
+USE smart_water_db;
+
+CREATE TABLE IF NOT EXISTS users (
+    email VARCHAR(254) NOT NULL PRIMARY KEY,
+    username VARCHAR(80) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;

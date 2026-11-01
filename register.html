@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Create a WaterGrid account">
+    <title>Create account | WaterGrid</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+    <main class="auth-card">
+        <a class="brand auth-brand" href="/register.html" aria-label="WaterGrid">
+            <span class="brand-mark" aria-hidden="true">W</span>
+            <span class="brand-name">water<span>grid</span></span>
+        </a>
+
+        <div class="eyebrow auth-eyebrow">GET STARTED</div>
+        <h1>Create account</h1>
+        <p class="auth-intro">Sign up for an operator account to monitor the water network and execute distribution tasks.</p>
+
+        <div id="authError" class="auth-message auth-message-error" style="display: none;"></div>
+
+        <form id="registerForm" class="auth-form">
+            <label for="username">Username</label>
+            <input
+                type="text"
+                id="username"
+                name="username"
+                autocomplete="username"
+                required
+                maxlength="80"
+                placeholder="Enter your name"
+            >
+
+            <label for="email">Email address</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                autocomplete="email"
+                required
+                maxlength="254"
+                placeholder="name@watergrid.com"
+            >
+
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                autocomplete="new-password"
+                required
+                placeholder="At least 8 characters"
+            >
+            <div class="field-help">Include at least one uppercase letter, one lowercase letter, and one number.</div>
+
+            <label for="confirm_password">Confirm password</label>
+            <input
+                type="password"
+                id="confirm_password"
+                name="confirm_password"
+                autocomplete="new-password"
+                required
+                placeholder="Repeat your password"
+            >
+
+            <button type="submit" id="submitBtn" class="button button-primary auth-submit">
+                Create account
+            </button>
+        </form>
+
+        <p class="auth-switch">
+            Already registered? <a href="/login.html">Sign in here</a>
+        </p>
+        <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); text-align: center;">
+            <button type="button" class="mini-button" onclick="window.openSupabaseModal()" style="font-size: 11px; padding: 3px 8px;">
+                ⚙ Configure Supabase Cloud Backend
+            </button>
+        </div>
+    </main>
+
+    <!-- Supabase SDK & WaterGrid Engines -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-service.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check if already authenticated
+            const user = await window.supabaseService.auth.getCurrentUser();
+            if (user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const registerForm = document.getElementById('registerForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const authError = document.getElementById('authError');
+
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                authError.style.display = 'none';
+
+                const username = document.getElementById('username').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value;
+                const confirm_password = document.getElementById('confirm_password').value;
+
+                if (password !== confirm_password) {
+                    authError.textContent = 'Passwords do not match.';
+                    authError.style.display = 'block';
+                    return;
+                }
+
+                if (password.length < 8) {
+                    authError.textContent = 'Password must be at least 8 characters long.';
+                    authError.style.display = 'block';
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creating account...';
+
+                try {
+                    const result = await window.supabaseService.auth.signUp(email, password, username);
+                    if (result.success) {
+                        window.location.href = 'login.html?registered=true';
+                    } else {
+                        authError.textContent = result.error || 'Registration failed. Please check your details.';
+                        authError.style.display = 'block';
+                    }
+                } catch (err) {
+                    authError.textContent = 'Registration error: ' + (err.message || 'Please check network.');
+                    authError.style.display = 'block';
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create account';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

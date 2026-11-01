@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sign in to WaterGrid">
+    <title>Sign in | WaterGrid</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-page">
+    <main class="auth-card">
+        <a class="brand auth-brand" href="/login.html" aria-label="WaterGrid">
+            <span class="brand-mark" aria-hidden="true">W</span>
+            <span class="brand-name">water<span>grid</span></span>
+        </a>
+
+        <div class="eyebrow auth-eyebrow">ACCOUNT ACCESS</div>
+        <h1>Sign in</h1>
+        <p class="auth-intro">Sign in with your email and password to open the operations dashboard.</p>
+
+        <div id="authFlash" class="auth-message auth-message-success" style="display: none;"></div>
+        <div id="authError" class="auth-message auth-message-error" style="display: none;"></div>
+
+        <form id="loginForm" class="auth-form">
+            <label for="email">Email</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                autocomplete="username"
+                required
+                placeholder="name@watergrid.com"
+            >
+
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                autocomplete="current-password"
+                required
+                placeholder="Enter your password"
+            >
+
+            <button type="submit" id="submitBtn" class="button button-primary auth-submit">
+                Sign in
+            </button>
+        </form>
+
+        <p class="auth-switch">
+            Need an account? <a href="/register.html">Create one</a>
+        </p>
+
+        <div style="margin-top: 14px; padding: 12px 14px; background: rgba(37, 133, 215, 0.08); border: 1px solid rgba(37, 133, 215, 0.25); border-radius: 8px; text-align: center;">
+            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: var(--navy);">Are you a resident requesting municipal water?</p>
+            <a href="public-login.html" class="button button-outline" style="display: inline-block; font-size: 12px; padding: 6px 14px; text-decoration: none; border-color: var(--blue); color: var(--blue); font-weight: 700;">
+                🏘 Citizen &amp; Public Water Request Portal &rarr;
+            </a>
+        </div>
+
+        <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center;">
+            <span>Control Room Admin: <strong>admin@watergrid.com</strong> / <strong>Admin@123</strong></span>
+            <span>Citizen Demo Account: <strong>citizen@watergrid.com</strong> / <strong>Citizen@123</strong></span>
+            <button type="button" class="mini-button" onclick="window.openSupabaseModal()" style="font-size: 11px; padding: 3px 8px;">
+                ⚙ Configure Supabase Cloud Backend
+            </button>
+        </div>
+    </main>
+
+    <!-- Supabase SDK & WaterGrid Engines -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-service.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Check if already authenticated
+            const user = await window.supabaseService.auth.getCurrentUser();
+            if (user) {
+                if (user.role === 'public') {
+                    window.location.href = 'public.html';
+                } else {
+                    window.location.href = 'index.html';
+                }
+                return;
+            }
+
+            const loginForm = document.getElementById('loginForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const authError = document.getElementById('authError');
+            const authFlash = document.getElementById('authFlash');
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('registered')) {
+                authFlash.textContent = 'Account created successfully! Please sign in with your credentials.';
+                authFlash.style.display = 'block';
+            }
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                authError.style.display = 'none';
+                authFlash.style.display = 'none';
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Signing in...';
+
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value;
+
+                try {
+                    const result = await window.supabaseService.auth.signIn(email, password);
+                    if (result.success) {
+                        if (result.user && result.user.role === 'public') {
+                            window.location.href = 'public.html';
+                        } else {
+                            window.location.href = 'index.html';
+                        }
+                    } else {
+                        authError.textContent = result.error || 'Email or password is incorrect.';
+                        authError.style.display = 'block';
+                    }
+                } catch (err) {
+                    authError.textContent = 'Authentication error: ' + (err.message || 'Please check network.');
+                    authError.style.display = 'block';
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign in';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
