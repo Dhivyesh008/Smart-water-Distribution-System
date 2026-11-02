@@ -992,41 +992,187 @@
         },
 
         async acceptWaterRequest(requestId) {
+            await initClient();
             const rawId = String(requestId).replace(/\D/g, '');
             const numericId = rawId ? parseInt(rawId, 10) : null;
             const idFilter = numericId !== null ? numericId : requestId;
 
-            // 1. Update Supabase PostgreSQL water_requests table
+            function findUsableReservoir(areaId, reservoirs, pipelines) {
+                const adj = {};
+                (pipelines || []).forEach(p => {
+                    const from = p.from || p.from_id;
+                    const to = p.to || p.to_id;
+                    const isWorking = p.isWorking !== undefined ? p.isWorking : p.is_working;
+                    if (isWorking) {
+                        if (!adj[from]) adj[from] = [];
+                        if (!adj[to]) adj[to] = [];
+                        adj[from].push(to);
+                        adj[to].push(from);
+                    }
+                });
+
+                for (const r of (reservoirs || [])) {
+                    const supply = (r.remaining_supply !== undefined ? r.remaining_supply : r.remainingSupply) || 0;
+                    if (supply <= 0) continue;
+
+                    const visited = new Set();
+                    const queue = [r.id];
+                    visited.add(r.id);
+                    let found = false;
+
+                    while (queue.length > 0) {
+                        const curr = queue.shift();
+                        if (curr === areaId) {
+                            found = true;
+                            break;
+                        }
+                        for (const n of (adj[curr] || [])) {
+                            if (!visited.has(n)) {
+                                visited.add(n);
+                                queue.push(n);
+                            }
+                        }
+                    }
+                    if (found) return r;
+                }
+                return null;
+            }
+
+            function isPhysicallyConnected(areaId, reservoirs, pipelines) {
+                const adj = {};
+                (pipelines || []).forEach(p => {
+                    const from = p.from || p.from_id;
+                    const to = p.to || p.to_id;
+                    if (!adj[from]) adj[from] = [];
+                    if (!adj[to]) adj[to] = [];
+                    adj[from].push(to);
+                    adj[to].push(from);
+                });
+                for (const r of (reservoirs || [])) {
+                    const visited = new Set();
+                    const queue = [r.id];
+                    visited.add(r.id);
+                    while (queue.length > 0) {
+                        const curr = queue.shift();
+                        if (curr === areaId) return true;
+                        for (const n of (adj[curr] || [])) {
+                            if (!visited.has(n)) {
+                                visited.add(n);
+                                queue.push(n);
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
+            let allocatedLitres = 0;
+            let assignedResName = '';
+            let targetAreaName = '';
+            let resRemaining = 0;
+            let failReason = null;
+
+            // 1. Live Supabase PostgreSQL Allocation
             if (supabaseClient && idFilter) {
                 try {
-                    // Try 1: Rich update (status: 'approved', decision_notes)
-                    let res = await supabaseClient.from('water_requests')
-                        .update({ status: 'approved', decision_notes: 'Approved by Grid Administrator' })
-                        .eq('id', idFilter);
+                    const { data: reqData } = await supabaseClient
+                        .from('water_requests')
+                        .select('*')
+                        .eq('id', idFilter)
+                        .single();
 
-                    if (res.error) {
-                        // Try 2: If decision_notes column doesn't exist, try status: 'approved' only
-                        console.warn('Supabase rich accept update failed, trying status:approved without decision_notes:', res.error.message);
-                        res = await supabaseClient.from('water_requests')
-                            .update({ status: 'approved' })
+                    const requests = LocalStore.get('requests', []);
+                    const localReq = requests.find(r => String(r.id) === String(requestId) || String(r.numericId) === String(idFilter));
+                    const reqAreaId = reqData?.area_id || localReq?.areaId;
+                    const reqAmount = reqData?.requested_litres || localReq?.requestedLitres || 0;
+
+                    const [resRes, areasRes, pipesRes] = await Promise.all([
+                        supabaseClient.from('reservoirs').select('*').order('id'),
+                        supabaseClient.from('demand_areas').select('*').order('id'),
+                        supabaseClient.from('pipelines').select('*').order('id')
+                    ]);
+
+                    const reservoirs = resRes.data || [];
+                    const areas = areasRes.data || [];
+                    const pipelines = pipesRes.data || [];
+
+                    const targetArea = areas.find(a => a.id === reqAreaId);
+                    targetAreaName = targetArea ? targetArea.name : reqAreaId;
+
+                    const assignedRes = findUsableReservoir(reqAreaId, reservoirs, pipelines);
+
+                    if (assignedRes && assignedRes.remaining_supply > 0) {
+                        allocatedLitres = Math.min(reqAmount, assignedRes.remaining_supply);
+                        assignedRes.remaining_supply -= allocatedLitres;
+                        resRemaining = assignedRes.remaining_supply;
+                        assignedResName = assignedRes.name;
+
+                        // Deduct from reservoir in Supabase
+                        await supabaseClient
+                            .from('reservoirs')
+                            .update({
+                                remaining_supply: assignedRes.remaining_supply,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', assignedRes.id);
+
+                        // Add to demand area allocated_water in Supabase
+                        if (targetArea) {
+                            targetArea.allocated_water = (targetArea.allocated_water || 0) + allocatedLitres;
+                            await supabaseClient
+                                .from('demand_areas')
+                                .update({
+                                    allocated_water: targetArea.allocated_water,
+                                    updated_at: new Date().toISOString()
+                                })
+                                .eq('id', targetArea.id);
+                        }
+
+                        // Record in allocation_history
+                        await supabaseClient.from('allocation_history').insert([{
+                            area_id: reqAreaId,
+                            area_name: targetAreaName,
+                            allocated_litres: allocatedLitres,
+                            reservoir_name: assignedRes.name,
+                            result: 'allocated'
+                        }]);
+
+                        // Update request status
+                        const notes = `Allocated ${allocatedLitres.toLocaleString()} L from ${assignedRes.name}`;
+                        let upRes = await supabaseClient.from('water_requests')
+                            .update({ status: 'approved', decision_notes: notes })
                             .eq('id', idFilter);
-                    }
-
-                    if (res.error) {
-                        // Try 3: If check constraint only allows legacy ('pending', 'processed', 'cancelled')
-                        console.warn('Supabase status:approved failed (constraint may only allow legacy statuses), trying processed:', res.error.message);
-                        res = await supabaseClient.from('water_requests')
-                            .update({ status: 'processed' })
-                            .eq('id', idFilter);
-                    }
-
-                    if (res.error) {
-                        console.error('Supabase accept error on all attempts:', res.error);
+                        if (upRes.error) {
+                            await supabaseClient.from('water_requests')
+                                .update({ status: 'processed', decision_notes: notes })
+                                .eq('id', idFilter);
+                        }
                     } else {
-                        console.log('✓ Successfully updated accepted request in Supabase:', idFilter);
+                        const connected = isPhysicallyConnected(reqAreaId, reservoirs, pipelines);
+                        const outcome = connected ? 'no_supply' : 'disconnected';
+                        failReason = connected
+                            ? 'Reachable reservoirs have 0 L remaining supply.'
+                            : `${targetAreaName} is disconnected from reservoirs due to broken pipeline.`;
+
+                        await supabaseClient.from('allocation_history').insert([{
+                            area_id: reqAreaId,
+                            area_name: targetAreaName,
+                            allocated_litres: 0,
+                            reservoir_name: 'None',
+                            result: outcome
+                        }]);
+
+                        await supabaseClient.from('water_requests')
+                            .update({ status: 'cancelled', decision_notes: `Rejected: ${failReason}` })
+                            .eq('id', idFilter);
+
+                        return {
+                            success: false,
+                            error: `Cannot fulfill request: ${failReason}`
+                        };
                     }
                 } catch (err) {
-                    console.warn('Supabase accept error:', err);
+                    console.warn('Supabase live accept & allocate error:', err);
                 }
             }
 
@@ -1039,17 +1185,53 @@
                 });
             } catch (e) {}
 
-            // 3. LocalStore update
+            // 3. Update LocalStore
             const requests = LocalStore.get('requests', []);
             const req = requests.find(r => String(r.id) === String(requestId) || String(r.numericId) === String(idFilter));
             if (req) {
-                req.status = 'approved';
-                req.decisionNotes = 'Approved by Grid Administrator';
+                req.status = allocatedLitres > 0 ? 'allocated' : 'approved';
+                req.decisionNotes = allocatedLitres > 0
+                    ? `Allocated ${allocatedLitres.toLocaleString()} L from ${assignedResName}`
+                    : 'Approved by Grid Administrator';
                 LocalStore.set('requests', requests);
             }
-            return { success: true, message: `Request ${requestId} accepted and approved for water allocation.` };
-        },
 
+            if (allocatedLitres > 0) {
+                const localReservoirs = LocalStore.get('reservoirs', []);
+                const r = localReservoirs.find(res => res.name === assignedResName || (assignedResName && res.name.includes(assignedResName)));
+                if (r) {
+                    r.remainingSupply = Math.max(0, (r.remainingSupply || 0) - allocatedLitres);
+                    LocalStore.set('reservoirs', localReservoirs);
+                }
+                const localAreas = LocalStore.get('areas', []);
+                const a = localAreas.find(ar => ar.name === targetAreaName || ar.id === req?.areaId);
+                if (a) {
+                    a.allocatedWater = (a.allocatedWater || 0) + allocatedLitres;
+                    LocalStore.set('areas', localAreas);
+                }
+
+                let localHist = LocalStore.get('history', []);
+                const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const nowDate = new Date().toLocaleDateString();
+                localHist.unshift({
+                    id: Date.now(),
+                    time: nowStr,
+                    timestamp: nowStr,
+                    date: nowDate,
+                    areaId: req?.areaId || '—',
+                    areaName: targetAreaName,
+                    allocatedLitres: allocatedLitres,
+                    reservoirName: assignedResName,
+                    result: 'allocated'
+                });
+                LocalStore.set('history', localHist);
+            }
+
+            return {
+                success: true,
+                message: `✓ Request ${requestId} accepted! Allocated ${allocatedLitres.toLocaleString()} L from ${assignedResName} to ${targetAreaName}. Remaining in ${assignedResName}: ${resRemaining.toLocaleString()} L.`
+            };
+        },
         async rejectWaterRequest(requestId, reason = 'Rejected by Grid Administrator') {
             const rawId = String(requestId).replace(/\D/g, '');
             const numericId = rawId ? parseInt(rawId, 10) : null;

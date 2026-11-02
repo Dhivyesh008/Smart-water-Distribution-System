@@ -278,7 +278,7 @@ function renderDashboard(state) {
     // 5. Citizen & Community Requests Approval Desk (Admin Review)
     const allReqs = state.allRequests || [];
     const pendingReviewReqs = allReqs.filter(r => r.status === 'pending');
-    const approvedReqs = allReqs.filter(r => r.status === 'approved');
+    const approvedReqs = allReqs.filter(r => r.status === 'approved' || r.status === 'allocated');
     const rejectedReqs = allReqs.filter(r => r.status === 'rejected');
 
     setSafeText('pendingAdminReviewCount', `${pendingReviewReqs.length} awaiting decision`);

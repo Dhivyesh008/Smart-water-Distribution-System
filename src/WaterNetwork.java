@@ -465,6 +465,30 @@ public class WaterNetwork {
         if (requestId == null) return false;
         for (WaterRequest req : allRequests) {
             if (req.getId().equalsIgnoreCase(requestId.trim())) {
+                DemandArea area = req.getArea();
+                Reservoir reservoir = findUsableReservoir(area);
+                if (reservoir != null && reservoir.getRemainingSupply() > 0) {
+                    int allocated = Math.min(req.getRequestedLitres(), reservoir.getRemainingSupply());
+                    if (allocated > 0) {
+                        reservoir.allocateWater(allocated);
+                        area.allocateWater(allocated);
+                        req.setStatus("allocated");
+                        req.setDecisionNotes("Allocated " + allocated + " L from " + reservoir.getName());
+                        waterRequests.remove(req);
+                        allocationHistory.add(
+                                area.getName()
+                                + " <- "
+                                + allocated
+                                + " L from "
+                                + reservoir.getName()
+                        );
+                        recordStructuredAllocation(new AllocationRecord(
+                                area.getAreaId(), area.getName(), allocated, reservoir.getReservoirId(), reservoir.getName(), "allocated"
+                        ));
+                        System.out.println("Admin ACCEPTED and ALLOCATED " + allocated + " L to Request " + req.getId() + " from " + reservoir.getName());
+                        return true;
+                    }
+                }
                 req.setStatus("approved");
                 req.setDecisionNotes("Approved by Grid Administrator");
                 if (!waterRequests.contains(req)) {
