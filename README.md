@@ -64,3 +64,4 @@ java -cp out/production/SmartWater WaterGridHttpServer
 - **Citizen Request Portal:**
   - Email: `citizen@watergrid.com`
   - Password: `Citizen@123`
+
