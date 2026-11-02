@@ -1137,14 +1137,14 @@
                             result: 'allocated'
                         }]);
 
-                        // Update request status
-                        const notes = `Allocated ${allocatedLitres.toLocaleString()} L from ${assignedRes.name}`;
+                        // Update request status in Supabase ('processed' maps to 'allocated' in UI)
                         let upRes = await supabaseClient.from('water_requests')
-                            .update({ status: 'approved', decision_notes: notes })
+                            .update({ status: 'processed' })
                             .eq('id', idFilter);
                         if (upRes.error) {
+                            console.warn('Supabase status:processed failed, trying approved:', upRes.error.message);
                             await supabaseClient.from('water_requests')
-                                .update({ status: 'processed', decision_notes: notes })
+                                .update({ status: 'approved' })
                                 .eq('id', idFilter);
                         }
                     } else {
@@ -1163,7 +1163,7 @@
                         }]);
 
                         await supabaseClient.from('water_requests')
-                            .update({ status: 'cancelled', decision_notes: `Rejected: ${failReason}` })
+                            .update({ status: 'cancelled' })
                             .eq('id', idFilter);
 
                         return {
